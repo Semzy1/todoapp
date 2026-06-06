@@ -14,14 +14,15 @@ func main() {
 
 	// Check if we should run web server or CLI
 	if len(os.Args) > 1 && os.Args[1] == "--web" {
-		// Run web server
-		port := ":8080"
-		if len(os.Args) > 2 {
-			port = ":" + os.Args[2]
+
+		// Render provides the port through an environment variable
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "8080"
 		}
 
 		server := NewWebServer(todo)
-		if err := server.Start(port); err != nil {
+		if err := server.Start(":" + port); err != nil {
 			fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 			os.Exit(1)
 		}
@@ -147,10 +148,15 @@ func main() {
 			}
 
 		case "web":
-			fmt.Println("Starting web server on http://localhost:8080")
-			fmt.Println("Press Ctrl+C to stop the server")
+			port := os.Getenv("PORT")
+			if port == "" {
+				port = "8080"
+			}
+
+			fmt.Printf("Starting web server on http://localhost:%s\n", port)
+
 			server := NewWebServer(todo)
-			if err := server.Start(":8080"); err != nil {
+			if err := server.Start(":" + port); err != nil {
 				fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 			}
 			return
@@ -163,14 +169,14 @@ func main() {
 
 func printHelp() {
 	fmt.Println("Commands:")
-	fmt.Println("  add <task>        - Add a task")
+	fmt.Println("  add <task>              - Add a task")
 	fmt.Println("  list [all|pending|done] - Show tasks")
-	fmt.Println("  done <id>         - Mark task done")
-	fmt.Println("  delete <id>       - Remove task")
-	fmt.Println("  edit <id> <text>  - Change task title")
-	fmt.Println("  web               - Start web server")
-	fmt.Println("  help              - Show this help")
-	fmt.Println("  quit              - Exit")
+	fmt.Println("  done <id>               - Mark task done")
+	fmt.Println("  delete <id>             - Remove task")
+	fmt.Println("  edit <id> <text>        - Change task title")
+	fmt.Println("  web                     - Start web server")
+	fmt.Println("  help                    - Show this help")
+	fmt.Println("  quit                    - Exit")
 }
 
 func printTasks(tasks []Task) {
@@ -184,7 +190,11 @@ func printTasks(tasks []Task) {
 		if task.Done {
 			status = "x"
 		}
-		fmt.Printf("%d. [%s] %s (created: %s)\n", task.ID, status, task.Title, task.CreatedAt.Format("15:04"))
+		fmt.Printf("%d. [%s] %s (created: %s)\n",
+			task.ID,
+			status,
+			task.Title,
+			task.CreatedAt.Format("15:04"),
+		)
 	}
 }
-
