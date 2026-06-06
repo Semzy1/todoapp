@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODO Application</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .task {  
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .completed {
+            background-color: #f0f0f0;
+            text-decoration: line-through;
+        }
+        .task-info {
+            flex: 1;
+        }
+        .task-title {
+            font-size: 16px;
+        }
+        .task-title a {
+            text-decoration: none;
+            color: #0066cc;
+        }
+        .task-title a:hover {
+            text-decoration: underline;
+        }
+        .task-meta {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+        button, .btn {
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .add-form {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        .add-form input {
+            flex: 1;
+            padding: 8px;
+        }
+        .filter-section {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .filter-btn {
+            text-decoration: none;
+            padding: 5px 10px;
+            background-color: #e0e0e0;
+            color: black;
+        }
+        .filter-btn.active {
+            background-color: #0066cc;
+            color: white;
+        }
+        .stats {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #e8f4f8;
+        }
+        .stats span {
+            margin-right: 20px;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            min-width: 300px;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+        }
+        .close {
+            float: right;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        hr {
+            margin: 20px 0;
+        }
+        .export-btn {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            padding: 5px 10px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📝 TODO List Manager</h1>
+    
+    <div>
+        <a href="/export/json" class="export-btn">📥 Export JSON</a>
+        <a href="/detail.html" class="export-btn" style="background-color: #007bff; margin-left: 8px;">🔗 Detail Template</a>
+        <button onclick="toggleFilter()">🔍 Filter</button>
+    </div>
+
+    <div id="filterSection" class="filter-section" style="display: none;">
+        <div class="filter-buttons">
+            <a href="/?filter=all" class="filter-btn {{if eq .Filter "all"}}active{{end}}">All Tasks</a>
+            <a href="/?filter=pending" class="filter-btn {{if eq .Filter "pending"}}active{{end}}">Pending</a>
+            <a href="/?filter=completed" class="filter-btn {{if eq .Filter "completed"}}active{{end}}">Completed</a>
+        </div>
+    </div>
+
+    <div class="stats">
+        <span>📊 Total: {{.Stats.Total}}</span>
+        <span>⏳ Pending: {{.Stats.Pending}}</span>
+        <span>✅ Completed: {{.Stats.Completed}}</span>
+    </div>
+
+    <div>
+        <h2>Add New Task</h2>
+        <form action="/add" method="POST" class="add-form">
+            <input type="text" name="title" placeholder="Enter task description..." required>
+            <button type="submit">Add Task</button>
+        </form>
+    </div>
+
+    <hr>
+
+    <div>
+        <h2>Your Tasks</h2>
+        {{if .Tasks}}
+            {{range .Tasks}}
+                <div class="task {{if .Done}}completed{{end}}">
+                    <div class="task-info">
+                        <div class="task-title">
+                            <strong>#{{.ID}}</strong> 
+                            <a href="/task/{{.ID}}">{{.Title}}</a>
+                        </div>
+                        <div class="task-meta">
+                            Created: {{.CreatedAt.Format "2006-01-02 15:04:05"}}
+                            {{if ne .CreatedAt .UpdatedAt}}
+                                | Updated: {{.UpdatedAt.Format "2006-01-02 15:04:05"}}
+                            {{end}}
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        {{if not .Done}}
+                            <form action="/complete" method="POST" style="display: inline;">
+                                <input type="hidden" name="id" value="{{.ID}}">
+                                <button type="submit">✓ Complete</button>
+                            </form>
+                        {{end}}
+                        <button type="button" class="edit-btn" data-id="{{.ID}}" data-title="{{.Title}}" onclick="showEdit(this.dataset.id, this.dataset.title)">✎ Edit</button>
+                        <form action="/delete" method="POST" style="display: inline;" onsubmit="return confirm('Delete this task?')">
+                            <input type="hidden" name="id" value="{{.ID}}">
+                            <button type="submit">✗ Delete</button>
+                        </form>
+                    </div>
+                </div>
+            {{end}}
+        {{else}}
+            <p>✨ No tasks yet! Add one above to get started.</p>
+        {{end}}
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center;">
+        <div style="background: white; padding: 20px; border-radius: 5px; min-width: 300px;">
+            <span onclick="closeModal()" style="float: right; cursor: pointer;">&times;</span>
+            <h3>Edit Task</h3>
+            <form action="/edit" method="POST" id="editForm">
+                <input type="hidden" name="id" id="editId">
+                <input type="text" name="title" id="editTitle" required style="width: 100%; padding: 8px; margin: 10px 0;">
+                <button type="submit">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleFilter() {
+            var filter = document.getElementById('filterSection');
+            filter.style.display = filter.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function showEdit(id, title) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editTitle').value = title;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

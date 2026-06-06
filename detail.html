@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Details - TODO Application</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+        .task-detail { border: 2px solid #0066cc; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        .task-header { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        .task-status { display: inline-block; padding: 5px 10px; border-radius: 3px; font-weight: bold; }
+        .status-completed { background-color: #28a745; color: white; }
+        .status-pending { background-color: #ffc107; color: #333; }
+        .info-row { margin: 15px 0; padding: 10px; background-color: #f9f9f9; }
+        .info-label { font-weight: bold; display: inline-block; width: 120px; }
+        .task-title { font-size: 24px; margin: 20px 0; }
+        .actions { margin-top: 30px; display: flex; gap: 10px; }
+        button, .btn { padding: 8px 15px; cursor: pointer; text-decoration: none; border: none; font-size: 14px; display: inline-block; }
+        .btn-back { background-color: #6c757d; color: white; }
+        .btn-edit { background-color: #ffc107; color: #333; }
+        .btn-delete { background-color: #dc3545; color: white; }
+        .btn-complete { background-color: #28a745; color: white; }
+        .json-preview { background-color: #f4f4f4; padding: 10px; border-radius: 3px; font-family: monospace; font-size: 12px; overflow-x: auto; }
+        hr { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>📝 Task Details</h1>
+    
+    {{if .Task}}
+        <div class="task-detail">
+            <div class="task-header">
+                <h2>Task #{{.Task.ID}}</h2>
+                <div class="task-status {{if .Task.Done}}status-completed{{else}}status-pending{{end}}">
+                    {{if .Task.Done}}✅ COMPLETED{{else}}⏳ PENDING{{end}}
+                </div>
+            </div>
+
+            <div class="task-title">
+                <strong>{{.Task.Title}}</strong>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Created At:</span>
+                <span class="info-value">{{.Task.CreatedAt.Format "Monday, January 2, 2006 at 15:04:05"}}</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Last Updated:</span>
+                <span class="info-value">{{.Task.UpdatedAt.Format "Monday, January 2, 2006 at 15:04:05"}}</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Time Since Creation:</span>
+                <span class="info-value">{{.TimeSinceCreation}}</span>
+            </div>
+
+            {{if .Task.Done}}
+                <div class="info-row">
+                    <span class="info-label">Time to Complete:</span>
+                    <span class="info-value">{{.TimeToComplete}}</span>
+                </div>
+            {{end}}
+
+            <div class="info-row">
+                <span class="info-label">Status History:</span>
+                <span class="info-value">
+                    {{if .Task.Done}}
+                        Task was completed on {{.Task.UpdatedAt.Format "2006-01-02 15:04:05"}}
+                    {{else}}
+                        Task is still in progress
+                    {{end}}
+                </span>
+            </div>
+
+            <div class="actions">
+                <a href="/" class="btn btn-back">← Back to List</a>
+                {{if not .Task.Done}}
+                    <form action="/complete" method="POST" style="display: inline;">
+                        <input type="hidden" name="id" value="{{.Task.ID}}">
+                        <button type="submit" class="btn btn-complete">✓ Mark Complete</button>
+                    </form>
+                {{end}}
+                <button type="button" class="btn btn-edit" data-id="{{.Task.ID}}" data-title="{{.Task.Title}}" onclick="showEdit(this.dataset.id, this.dataset.title)">✎ Edit Task</button>
+                <form action="/delete" method="POST" style="display: inline;" onsubmit="return confirm('Delete this task?')">
+                    <input type="hidden" name="id" value="{{.Task.ID}}">
+                    <button type="submit" class="btn btn-delete">✗ Delete Task</button>
+                </form>
+            </div>
+        </div>
+
+        <hr>
+
+        <div>
+            <h3>Task JSON Data</h3>
+            <div class="json-preview">
+                <pre>{{.TaskJSON}}</pre>
+            </div>
+            <button onclick="copyToClipboard()">📋 Copy JSON to Clipboard</button>
+        </div>
+    {{else}}
+        <div style="border: 1px solid #dc3545; padding: 20px; background-color: #f8d7da;">
+            <h3>❌ Task Not Found</h3>
+            <p>The task you're looking for doesn't exist or has been deleted.</p>
+            <a href="/" class="btn btn-back">← Return to Home</a>
+        </div>
+    {{end}}
+
+    <!-- Edit Modal -->
+    <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center;">
+        <div style="background: white; padding: 20px; border-radius: 5px; min-width: 300px;">
+            <span onclick="closeModal()" style="float: right; cursor: pointer; font-size: 20px;">&times;</span>
+            <h3>Edit Task</h3>
+            <form action="/edit" method="POST">
+                <input type="hidden" name="id" id="editId">
+                <input type="text" name="title" id="editTitle" required style="width: 100%; padding: 8px; margin: 10px 0;">
+                <button type="submit">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showEdit(id, title) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editTitle').value = title;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+        
+        function copyToClipboard() {
+            const jsonText = document.querySelector('.json-preview pre').innerText;
+            navigator.clipboard.writeText(jsonText).then(function() {
+                alert('JSON copied to clipboard!');
+            });
+        }
+        
+        window.onclick = function(event) {
+            var modal = document.getElementById('editModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
