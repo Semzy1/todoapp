@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -38,8 +39,16 @@ func main() {
 		fmt.Print("todo> ")
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error reading input:", err)
-			continue
+			if err == io.EOF {
+				if input == "" {
+					fmt.Println()
+					return
+				}
+				input = strings.TrimSpace(input)
+			} else {
+				fmt.Fprintln(os.Stderr, "Error reading input:", err)
+				continue
+			}
 		}
 
 		input = strings.TrimSpace(input)
@@ -178,3 +187,4 @@ func printTasks(tasks []Task) {
 		fmt.Printf("%d. [%s] %s (created: %s)\n", task.ID, status, task.Title, task.CreatedAt.Format("15:04"))
 	}
 }
+
